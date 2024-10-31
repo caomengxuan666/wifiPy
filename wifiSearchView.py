@@ -1,5 +1,4 @@
 import json
-
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QLabel,
@@ -7,8 +6,38 @@ from PyQt5.QtWidgets import (
     QMessageBox
 )
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QPainter, QColor, QPen
 from config import cfg  # 假设config.py文件中定义了cfg对象并有timeout属性
+
+class CustomProgressBar(QProgressBar):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.signal_strength = 0
+
+    def set_signal_strength(self, signal_strength):
+        self.signal_strength = signal_strength
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        # 绘制背景
+        painter.fillRect(self.rect(), QColor(240, 240, 240))
+
+        # 绘制进度条
+        progress_width = int(self.rect().width() * self.value() / 100)
+        if self.signal_strength > -60:
+            color = QColor(0, 255, 0)  # 绿色
+        elif self.signal_strength > -70:
+            color = QColor(255, 255, 0)  # 黄色
+        else:
+            color = QColor(255, 0, 0)  # 红色
+        painter.fillRect(0, 0, progress_width, self.rect().height(), color)
+
+        # 绘制信号强度文本
+        painter.setPen(QColor(0, 0, 0))
+        painter.drawText(self.rect(), Qt.AlignCenter, f"{self.signal_strength} dBm")
 
 class WifiScannerView(QWidget):
     def __init__(self, controller):
@@ -43,7 +72,7 @@ class WifiScannerView(QWidget):
         progress_refresh_layout = QHBoxLayout()
 
         # 连接进度条
-        self.connect_progress_bar = QProgressBar(self)
+        self.connect_progress_bar = CustomProgressBar(self)
         self.connect_progress_bar.setValue(0)
         progress_refresh_layout.addWidget(self.connect_progress_bar)
 
@@ -78,9 +107,9 @@ class WifiScannerView(QWidget):
             self.table.setItem(row, 0, QTableWidgetItem(ssid))
 
             # 信号强度进度条
-            progress_bar = QProgressBar(self)
+            progress_bar = CustomProgressBar(self)
             progress_bar.setValue(self.normalize_signal_strength(wifi["signal"]))
-            progress_bar.setTextVisible(False)
+            progress_bar.set_signal_strength(wifi["signal"])
             self.set_progress_bar_color(progress_bar, wifi["signal"])
             self.table.setCellWidget(row, 1, progress_bar)
 
