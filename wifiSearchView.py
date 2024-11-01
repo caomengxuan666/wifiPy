@@ -6,13 +6,23 @@ from PyQt5.QtWidgets import (
     QMessageBox
 )
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QPainter, QColor, QPen
+from PyQt5.QtGui import QFont, QPainter, QColor, QPen, QLinearGradient
 from config import cfg  # 假设config.py文件中定义了cfg对象并有timeout属性
 
 class CustomProgressBar(QProgressBar):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.signal_strength = 0
+        self.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #333;
+                border-radius: 10px;
+                background-color: #f0f0f0;
+            }
+            QProgressBar::chunk {
+                border-radius: 10px;
+            }
+        """)
 
     def set_signal_strength(self, signal_strength):
         self.signal_strength = signal_strength
@@ -25,15 +35,34 @@ class CustomProgressBar(QProgressBar):
         # 绘制背景
         painter.fillRect(self.rect(), QColor(240, 240, 240))
 
-        # 绘制进度条
+        # 计算进度条宽度
         progress_width = int(self.rect().width() * self.value() / 100)
+
+        # 根据信号强度选择颜色
         if self.signal_strength > -60:
-            color = QColor(0, 255, 0)  # 绿色
+            start_color = QColor(0, 255, 0)  # 绿色
+            end_color = QColor(0, 255, 0)
         elif self.signal_strength > -70:
-            color = QColor(255, 255, 0)  # 黄色
+            start_color = QColor(255, 255, 0)  # 黄色
+            end_color = QColor(255, 255, 0)
         else:
-            color = QColor(255, 0, 0)  # 红色
-        painter.fillRect(0, 0, progress_width, self.rect().height(), color)
+            start_color = QColor(255, 0, 0)  # 红色
+            end_color = QColor(255, 0, 0)
+
+        # 使用渐变颜色
+        gradient = QLinearGradient(0, 0, progress_width, 0)
+        gradient.setColorAt(0, start_color)
+        gradient.setColorAt(1, end_color)
+
+        painter.setBrush(gradient)
+        painter.setPen(Qt.NoPen)
+        painter.drawRoundedRect(0, 0, progress_width, self.rect().height(), 10, 10)
+
+        # 绘制阴影
+        shadow_color = QColor(0, 0, 0, 50)
+        painter.setBrush(shadow_color)
+        painter.setPen(Qt.NoPen)
+        painter.drawRoundedRect(2, 2, progress_width, self.rect().height() - 4, 10, 10)
 
         # 绘制信号强度文本
         painter.setPen(QColor(0, 0, 0))
